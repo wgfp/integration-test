@@ -183,7 +183,7 @@ describe('POST /products', () => {
         title: novoProduto.title,
         price: novoProduto.price,
         description: novoProduto.description,
-        image: novoProduto.image,
+        thumbnail: novoProduto.thumbnail,
         category: novoProduto.category,
       });
   });
