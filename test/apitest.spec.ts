@@ -123,15 +123,12 @@ describe('GET /products - Casos Negativos', () => {
     expect(Array.isArray(res.products)).toBe(true);
   });
 
-  it('deve ignorar valor inválido no sort e retornar os produtos normalmente', async () => {
-    const res = await spec()
+  it('deve retornar 400 ao usar valor inválido no sort', async () => {
+    await spec()
       .get(`${BASE_URL}/products`)
       .withQueryParams({ sortBy: 'id', order: 'invalido' })
-      .expectStatus(200)
-      .returns('.');
-
-    expect(Array.isArray(res.products)).toBe(true);
-    expect(res.products.length).toBeGreaterThan(0);
+      .expectStatus(400)
+      .expectJsonLike({ message: /.+/ });
   });
 
   it('deve retornar 404 ao buscar um produto com ID em formato de texto', async () => {
@@ -155,9 +152,9 @@ describe('POST /products', () => {
 
   it('deve criar um novo produto e retornar status 200', async () => {
     await spec()
-      .post(`${BASE_URL}/products`)
+      .post(`${BASE_URL}/products/add`)
       .withJson(novoProduto)
-      .expectStatus(200)
+      .expectStatus(201)
       .expectJsonLike({
         id: /\d+/,
       });
@@ -165,9 +162,9 @@ describe('POST /products', () => {
 
   it('deve retornar o produto criado com um ID', async () => {
     const res = await spec()
-      .post(`${BASE_URL}/products`)
+      .post(`${BASE_URL}/products/add`)
       .withJson(novoProduto)
-      .expectStatus(200)
+      .expectStatus(201)
       .returns('.');
 
     expect(res).toHaveProperty('id');
@@ -176,9 +173,9 @@ describe('POST /products', () => {
 
   it('deve retornar os dados do produto enviado na resposta', async () => {
     await spec()
-      .post(`${BASE_URL}/products`)
+      .post(`${BASE_URL}/products/add`)
       .withJson(novoProduto)
-      .expectStatus(200)
+      .expectStatus(201)
       .expectJsonLike({
         title: novoProduto.title,
         price: novoProduto.price,
@@ -190,10 +187,10 @@ describe('POST /products', () => {
 
   it('deve enviar o header Content-Type correto', async () => {
     await spec()
-      .post(`${BASE_URL}/products`)
+      .post(`${BASE_URL}/products/add`)
       .withHeaders('Content-Type', 'application/json')
       .withJson(novoProduto)
-      .expectStatus(200);
+      .expectStatus(201);
   });
 });
 
@@ -203,27 +200,24 @@ describe('POST /products', () => {
 describe('POST /products - Casos Negativos', () => {
   it('deve retornar resposta ao enviar body vazio', async () => {
     const res = await spec()
-      .post(`${BASE_URL}/products`)
+      .post(`${BASE_URL}/products/add`)
       .withJson({})
-      .expectStatus(200)
+      .expectStatus(201)
       .returns('.');
 
-    // A FakeStoreAPI ainda retorna um ID mesmo com body vazio
-    // Valida que o comportamento é conhecido e documentado
     expect(res).toHaveProperty('id');
   });
 
   it('deve retornar resposta ao enviar apenas campos obrigatórios faltando', async () => {
     const produtoIncompleto = {
       title: 'Produto sem preço',
-      // price ausente intencionalmente
-      category: 'electronics',
+      category: 'smartphones',
     };
 
     const res = await spec()
-      .post(`${BASE_URL}/products`)
+      .post(`${BASE_URL}/products/add`)
       .withJson(produtoIncompleto)
-      .expectStatus(200)
+      .expectStatus(201)
       .returns('.');
 
     expect(res).toHaveProperty('id');
@@ -235,25 +229,23 @@ describe('POST /products - Casos Negativos', () => {
       title: 'Produto com preço inválido',
       price: 'não-é-um-número',
       description: 'Teste de tipo inválido',
-      image: 'https://i.pravatar.cc/150',
-      category: 'electronics',
+      thumbnail: 'https://i.pravatar.cc/150',
+      category: 'smartphones',
     };
 
     const res = await spec()
-      .post(`${BASE_URL}/products`)
+      .post(`${BASE_URL}/products/add`)
       .withJson(produtoInvalido)
-      .expectStatus(200)
+      .expectStatus(201)
       .returns('.');
 
-    // Documenta que a API não valida o tipo do price
     expect(res).toHaveProperty('id');
-    expect(res.price).toBe('não-é-um-número');
   });
 
   it('deve retornar resposta ao enviar body como array ao invés de objeto', async () => {
     await spec()
-      .post(`${BASE_URL}/products`)
+      .post(`${BASE_URL}/products/add`)
       .withJson([{ title: 'Produto em array' }])
-      .expectStatus(200);
+      .expectStatus(201);
   });
 });
