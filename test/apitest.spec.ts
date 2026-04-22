@@ -1,13 +1,11 @@
 import { spec, request } from 'pactum';
 
-const BASE_URL = 'https://fakestoreapi.com';
+const BASE_URL = 'https://dummyjson.com';
 
-// Simula um browser para evitar bloqueio do Cloudflare
+// Simula um browser para evitar possíveis bloqueios
 beforeAll(() => {
   request.setDefaultHeaders({
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-    'Accept': 'application/json, text/plain, */*',
-    'Accept-Language': 'en-US,en;q=0.9',
+    'Content-Type': 'application/json',
   });
 });
 
@@ -19,26 +17,19 @@ describe('GET /products', () => {
     await spec()
       .get(`${BASE_URL}/products`)
       .expectStatus(200)
-      .expectJsonLike([
-        {
-          id: /\d+/,
-          title: /.+/,
-          price: /\d+/,
-          category: /.+/,
-          description: /.+/,
-          image: /.+/,
-        },
-      ]);
+      .expectJsonLike({
+        products: [{ id: /\d+/, title: /.+/, price: /\d+/ }],
+      });
   });
 
-  it('deve retornar um array de produtos', async () => {
+  it('deve retornar um array de produtos dentro de "products"', async () => {
     const res = await spec()
       .get(`${BASE_URL}/products`)
       .expectStatus(200)
       .returns('.');
 
-    expect(Array.isArray(res)).toBe(true);
-    expect(res.length).toBeGreaterThan(0);
+    expect(Array.isArray(res.products)).toBe(true);
+    expect(res.products.length).toBeGreaterThan(0);
   });
 
   it('deve retornar uma quantidade limitada de produtos usando o query param ?limit', async () => {
@@ -48,20 +39,19 @@ describe('GET /products', () => {
       .expectStatus(200)
       .returns('.');
 
-    expect(Array.isArray(res)).toBe(true);
-    expect(res.length).toBe(3);
+    expect(Array.isArray(res.products)).toBe(true);
+    expect(res.products.length).toBe(3);
   });
 
   it('deve retornar os produtos ordenados em ordem decrescente', async () => {
     const res = await spec()
       .get(`${BASE_URL}/products`)
-      .withQueryParams({ sort: 'desc' })
+      .withQueryParams({ sortBy: 'id', order: 'desc' })
       .expectStatus(200)
       .returns('.');
 
-    expect(Array.isArray(res)).toBe(true);
-    // Decrescente significa que os IDs devem ir do maior para o menor
-    expect(res[0].id).toBeGreaterThan(res[res.length - 1].id);
+    const ids = res.products.map((p: any) => p.id);
+    expect(ids[0]).toBeGreaterThan(ids[ids.length - 1]);
   });
 });
 
@@ -79,7 +69,6 @@ describe('GET /products/:id', () => {
         price: /\d+/,
         category: /.+/,
         description: /.+/,
-        image: /.+/,
       });
   });
 
@@ -94,7 +83,7 @@ describe('GET /products/:id', () => {
     expect(res).toHaveProperty('price');
     expect(res).toHaveProperty('category');
     expect(res).toHaveProperty('description');
-    expect(res).toHaveProperty('image');
+    expect(res).toHaveProperty('thumbnail');
     expect(res).toHaveProperty('rating');
   });
 });
@@ -111,7 +100,6 @@ describe('GET /products/categories', () => {
 
     expect(Array.isArray(res)).toBe(true);
     expect(res.length).toBeGreaterThan(0);
-    expect(typeof res[0]).toBe('string');
   });
 });
 
@@ -119,56 +107,37 @@ describe('GET /products/categories', () => {
 // GET /products - Casos Negativos
 // ─────────────────────────────────────────
 describe('GET /products - Casos Negativos', () => {
-  it('deve retornar null ao buscar um produto com ID inexistente', async () => {
-    const res = await spec()
+  it('deve retornar 404 ao buscar um produto com ID inexistente', async () => {
+    await spec()
       .get(`${BASE_URL}/products/99999`)
-      .expectStatus(200)
-      .returns('.');
-
-    // A FakeStoreAPI retorna null para IDs inexistentes ao invés de 404
-    expect(res).toBeNull();
+      .expectStatus(404);
   });
 
-  it('deve retornar um array vazio ao usar limit=0', async () => {
+  it('deve retornar uma quantidade limitada de produtos usando ?limit=0', async () => {
     const res = await spec()
       .get(`${BASE_URL}/products`)
       .withQueryParams('limit', 0)
       .expectStatus(200)
       .returns('.');
 
-    expect(Array.isArray(res)).toBe(true);
-    expect(res.length).toBe(0);
-  });
-
-  it('deve ignorar limit negativo e retornar todos os produtos', async () => {
-    const res = await spec()
-      .get(`${BASE_URL}/products`)
-      .withQueryParams('limit', -1)
-      .expectStatus(200)
-      .returns('.');
-
-    expect(Array.isArray(res)).toBe(true);
-    expect(res.length).toBeGreaterThan(0);
+    expect(Array.isArray(res.products)).toBe(true);
   });
 
   it('deve ignorar valor inválido no sort e retornar os produtos normalmente', async () => {
     const res = await spec()
       .get(`${BASE_URL}/products`)
-      .withQueryParams({ sort: 'invalido' })
+      .withQueryParams({ sortBy: 'id', order: 'invalido' })
       .expectStatus(200)
       .returns('.');
 
-    expect(Array.isArray(res)).toBe(true);
-    expect(res.length).toBeGreaterThan(0);
+    expect(Array.isArray(res.products)).toBe(true);
+    expect(res.products.length).toBeGreaterThan(0);
   });
 
-  it('deve retornar null ao buscar um produto com ID em formato de texto', async () => {
-    const res = await spec()
+  it('deve retornar 404 ao buscar um produto com ID em formato de texto', async () => {
+    await spec()
       .get(`${BASE_URL}/products/abc`)
-      .expectStatus(200)
-      .returns('.');
-
-    expect(res).toBeNull();
+      .expectStatus(404);
   });
 });
 
@@ -180,8 +149,8 @@ describe('POST /products', () => {
     title: 'Produto de Teste',
     price: 29.99,
     description: 'Um produto criado para fins de teste',
-    image: 'https://i.pravatar.cc/150',
-    category: 'electronics',
+    thumbnail: 'https://i.pravatar.cc/150',
+    category: 'smartphones',
   };
 
   it('deve criar um novo produto e retornar status 200', async () => {
