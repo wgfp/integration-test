@@ -4,6 +4,9 @@ module.exports = {
   testMatch: ['**/test/**/*.[jt]s?(x)'],
   verbose: true,
   testTimeout: 30000,
+  collectCoverage: true,
+  coverageDirectory: 'coverage',
+  coverageReporters: ['lcov', 'text'],
   reporters: [
     'default',
     [
