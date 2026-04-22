@@ -1,8 +1,19 @@
-import { spec } from 'pactum';
+import { spec, request } from 'pactum';
 
 const BASE_URL = 'https://fakestoreapi.com';
 
+// Simula um browser para evitar bloqueio do Cloudflare
+beforeAll(() => {
+  request.setDefaultHeaders({
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9',
+  });
+});
+
+// ─────────────────────────────────────────
 // GET /products
+// ─────────────────────────────────────────
 describe('GET /products', () => {
   it('deve retornar todos os produtos com status 200', async () => {
     await spec()
@@ -49,11 +60,14 @@ describe('GET /products', () => {
       .returns('.');
 
     expect(Array.isArray(res)).toBe(true);
+    // Decrescente significa que os IDs devem ir do maior para o menor
     expect(res[0].id).toBeGreaterThan(res[res.length - 1].id);
   });
 });
 
+// ─────────────────────────────────────────
 // GET /products/:id
+// ─────────────────────────────────────────
 describe('GET /products/:id', () => {
   it('deve retornar um único produto pelo ID', async () => {
     await spec()
@@ -85,7 +99,9 @@ describe('GET /products/:id', () => {
   });
 });
 
+// ─────────────────────────────────────────
 // GET /products/categories
+// ─────────────────────────────────────────
 describe('GET /products/categories', () => {
   it('deve retornar uma lista de categorias', async () => {
     const res = await spec()
@@ -99,7 +115,9 @@ describe('GET /products/categories', () => {
   });
 });
 
+// ─────────────────────────────────────────
 // GET /products - Casos Negativos
+// ─────────────────────────────────────────
 describe('GET /products - Casos Negativos', () => {
   it('deve retornar null ao buscar um produto com ID inexistente', async () => {
     const res = await spec()
@@ -107,6 +125,7 @@ describe('GET /products - Casos Negativos', () => {
       .expectStatus(200)
       .returns('.');
 
+    // A FakeStoreAPI retorna null para IDs inexistentes ao invés de 404
     expect(res).toBeNull();
   });
 
@@ -153,7 +172,9 @@ describe('GET /products - Casos Negativos', () => {
   });
 });
 
+// ─────────────────────────────────────────
 // POST /products
+// ─────────────────────────────────────────
 describe('POST /products', () => {
   const novoProduto = {
     title: 'Produto de Teste',
@@ -207,7 +228,9 @@ describe('POST /products', () => {
   });
 });
 
+// ─────────────────────────────────────────
 // POST /products - Casos Negativos
+// ─────────────────────────────────────────
 describe('POST /products - Casos Negativos', () => {
   it('deve retornar resposta ao enviar body vazio', async () => {
     const res = await spec()
@@ -216,6 +239,8 @@ describe('POST /products - Casos Negativos', () => {
       .expectStatus(200)
       .returns('.');
 
+    // A FakeStoreAPI ainda retorna um ID mesmo com body vazio
+    // Valida que o comportamento é conhecido e documentado
     expect(res).toHaveProperty('id');
   });
 
